@@ -22,12 +22,25 @@ headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 # titles = []     # 뉴스 제목들을 담을 빈 리스트 생성
 # for title_tag in title_tags:
 #     titles.append(re.compile('[^가-힣|a-z|A-Z]').sub(' ', title_tag.text))        # re. -> 내가 원하는 내용들만 뽑아올때. 모든 한글조합.
-# print(titles)
+# print(titles)     # 뉴스 제목에 한글, 대문자, 소문제 제외하고 다 공백으로.
 # print(len(titles))
         # 모든 페이지의 헤드라인 뉴스들만 가져오기
 
-df_titles = pd.DataFrame()
+df_titles = pd.DataFrame()      # 빈 데이터 프레임
 re_title = re.compile('[^가-힣]|a-z|A-Z')
 
-for i in range(6):
-    resp = requests.get('https://news.naver.com/main/main.naver?mode=LSD&mid=shm&sid1=10{}'.format(i),)
+for i in range(6):      # 카테고리가 6개.
+    resp = requests.get('https://news.naver.com/main/main.naver?mode=LSD&mid=shm&sid1=10{}'.format(i), headers=headers)
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    title_tags = soup.select('.sh_text_headline')
+    titles = []  # 뉴스 제목들을 담을 빈 리스트 생성
+    for title_tag in title_tags:
+        titles.append(re.compile('[^가-힣|a-z|A-Z]').sub(' ', title_tag.text))
+    df_section_titles = pd.DataFrame(titles, columns=['titles'])
+    df_section_titles['category'] = category[i]
+    df_titles = pd.concat([df_titles, df_section_titles], axis='rows', ignore_index=True)
+
+print(df_titles.head())
+df_titles.info()
+print(df_titles['category'].value_counts())
+df_titles.to_csv('./crawling_data/naver_headline_news_{}.csv'.format(datetime.datetime.now().strftime('%Y%m%d')), index=False)
